@@ -28,6 +28,7 @@ input and standard error, respectively.
 
 ## Requirements
 
-* Python 3.5+ (`typing` module required)
+* Python 3.5+
+  * This program was rewritten as an excercise in type annotations
 
 :smile:
