@@ -60,7 +60,7 @@ __revision__ = 2
 __version__ = '2018.09.02 (rev{})'.format(__revision__)
 __copyright__ = """\
 antipasti {}
-Copyright © 1995-2018 Klaus Alexander Seistrup <klaus@seistrup.dk>
+Copyright © 2005-2018 Klaus Alexander Seistrup <klaus@seistrup.dk>
 
 This is free software; see the source for copying conditions. There is no
 warranty; not even for merchantability or fitness for a particular purpose.\
