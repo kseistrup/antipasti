@@ -44,12 +44,12 @@ from pprint import pprint
 
 try:
     from typing import Any, Deque, Dict, IO, List, Union
-except ImportError as imperr:
+except (ImportError, ModuleNotFoundError) as imperr:
     print(str(imperr), file=sys.stderr)
     sys.exit(1)
 
-if sys.version_info < (3, 5):
-    print('Python 3.5+ required', file=sys.stderr)
+if sys.version_info < (3, 6):
+    print('Python 3.6+ required', file=sys.stderr)
     sys.exit(1)
 
 _ = locale.setlocale(locale.LC_ALL, '')
