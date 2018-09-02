@@ -2,6 +2,10 @@
 
 The antipode of paste(1), after an idea by Henrik Christian Grove.
 
+## Installation
+
+Put `antipasti` somewhere in your PATH.
+
 ## Usage
 
 ```
