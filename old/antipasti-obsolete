@@ -1,0 +1,207 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+'''
+Usage: antipasti [OPTIONS] [FILES] ...
+  Options are:
+    -a, --append ........ open file(s) for appending (default 'w')
+    -h, --help .......... this brief help text
+    -v, --version ....... print version information
+    -c, --copyright ..... show copying policy
+
+Antipasti reads from stdin and writes to file1, file2, ..., fileN
+such that lines 1, N+1, 2*N+1, ... are written to file1,
+          lines 2, N+2, 2*N+2, ... are written to file2,
+          et cetera.
+
+Antipasti recognizes '-' and '+' as aliases for stdout resp. stderr.
+'''
+##############################################################################
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the GNU General Public License as published by the Free #
+# Software Foundation; either version 3 of the License, or (at your option)  #
+# any later version.                                                         #
+#                                                                            #
+# This program is distributed in the hope that it will be useful, but with-  #
+# out any warranty; without even the implied warranty of merchantability or  #
+# fitness for a particular purpose.  See the GNU General Public License for  #
+# more details.  <http://gplv3.fsf.org/>                                     #
+##############################################################################
+
+__version__     = '0.1.2.1'
+__revision__    = '2009-02-16'
+__author__      = 'Klaus Alexander Seistrup <kas+antipasti@magnetic-ink.dk>'
+__copyright__   = '''antipasti %s (%s)
+Copyright (C) 2005-2008 Klaus Alexander Seistrup <klaus@seistrup.dk>
+
+This is free software; see the source for copying conditions.  There is no
+warranty; not even for merchantability or fitness for a particular purpose.''' % (
+    __version__, __revision__
+)
+
+import sys
+import os
+import getopt
+
+from sys import stdin, stdout, stderr
+
+class MyError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+    # end def __init__
+# end class Usage
+
+options = {
+    'a': 'append',
+    'c': 'copyright',
+    'h': 'help',
+    'v': 'version',
+}
+xopts = ['copyleft', 'copying']
+sopts = ''.join(options.keys())
+lopts = options.values() + xopts
+
+def my_open(name, mode='w'):
+    fp = {
+        '-': stdout,
+        '+': stderr,
+    }.get(name, None)
+    if fp is not None:
+        return fp
+    # end if
+    try:
+        try:
+            fp = file(name, mode)
+        except IOError, msg:
+            raise MyError(msg)
+        except:
+            modes = {
+                'a': 'appending',
+                'r': 'reading',
+                'w': 'writing',
+            }
+            raise MyError('cannot open file %s for %s' % (name, modes.get(mode[0], 'something')))
+        # end try
+    except MyError, err:
+        print >>stderr, err.msg
+        sys.exit(1)
+    # end try
+    return fp
+# end def my_open
+
+def my_write(where, what):
+    try:
+        try:
+            where.write(what)
+        except IOError, msg:
+            raise MyError('%s: %s' % (where.name, msg))
+        except:
+            raise MyError('cannot write to file %s' % (where.name,))
+        # end try
+    except MyError, err:
+        print >> stderr, err.msg
+        sys.exit(1)
+    # end try
+# end def my_write
+
+# Main entry point
+def main(argv=None):
+
+    from collections import deque
+
+    if argv is None:
+        argv = sys.argv
+    # end if
+
+    me = os.path.basename(argv[0])
+    while me[-3:] == '.py':
+        me = me[:-3]
+    # end while
+
+    try:
+        try:
+            (opts, args) = getopt.getopt(argv[1:], sopts, lopts)
+        except getopt.error, err:
+            raise MyError(err.msg.capitalize() + '.')
+        # end try
+    except MyError, err:
+        print >>stderr, err.msg
+        print >>stderr, "Try '%s --help' for more information." % me
+        return 1
+    # end try
+
+    mode = 'w'
+
+    # Loop through options
+    for (opt, arg) in opts:
+        if   opt in ('-a', '--append'):
+            mode = 'a'
+        elif opt in ('-h', '--help'):
+            print __doc__
+            return 0
+        elif opt in ('-c', '--copyright'):
+            print __copyright__
+            return 0
+        elif opt in ('-v', '--version'):
+            if me != 'antipasti':
+                print 'antipasti/%s (%s) %s' % (__version__, __revision__, me)
+            else:
+                print 'antipasti/%s (%s)' % (__version__, __revision__)
+            # end if
+            return 0
+        else:
+            print >>stderr, "Try '%s --help' for more information." % me
+            return 1
+        # end if
+    # end for
+
+    streams = deque()
+
+    if not args:
+        streams.append(stdout)
+    else:
+        cache = {}
+        for arg in args:
+            if arg not in cache:
+                cache[arg] = my_open(arg, mode)
+            # end if
+            streams.appendleft(cache[arg])
+        # end for
+    # end if
+
+    if len(streams) == 1:
+        # Or simply do a my_write(streams[0].read())?
+        for line in stdin:
+            my_write(streams[0], line)
+        # end for
+    else:
+        for line in stdin:
+            streams.rotate()
+            my_write(streams[0], line)
+        # end for
+    # end if
+
+    for fp in streams:
+        if fp.name not in ('<stdin>', '<stdout>', '<stderr>'):
+            try:
+                rc = fp.close()
+            except:
+                pass
+            # end try
+        # end if
+    # end for
+
+    return 0
+
+# end def main
+
+if __name__ == '__main__':
+    try:
+        from locale import setlocale, LC_ALL
+        dummy = setlocale(LC_ALL, '')
+    except:
+        pass
+    # end try
+    sys.exit(main())
+# end if
+
+# eof
