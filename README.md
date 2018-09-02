@@ -22,6 +22,6 @@ Antipasti recognizes '-' and '+' as aliases for stdout resp. stderr.
 
 ## Requirements
 
-* Python 3+
+* Python 3.5+ (`typing` module required)
 
 :smile:
