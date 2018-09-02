@@ -31,4 +31,8 @@ input and standard error, respectively.
 * Python 3.5+
   * This program was rewritten as an excercise in type annotations
 
+## License
+
+GNU General Public License v3+
+
 :smile:
