@@ -39,4 +39,9 @@ input and standard error, respectively.
 
 GNU General Public License v3+
 
+## Repositories
+
+* [https://github.com/kseistrup/antipasti.git](https://github.com/kseistrup/antipasti.git "M$ Github")
+* [ssb://%TcomkhAqAqX2UOE0q39qXLtYoCqJ93z9l4ZMMBdU6Gs=.sha256](ssb://%TcomkhAqAqX2UOE0q39qXLtYoCqJ93z9l4ZMMBdU6Gs=.sha256 "git-ssb")
+
 :smile:
