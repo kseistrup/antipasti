@@ -32,8 +32,9 @@ input and standard error, respectively.
 
 ## Requirements
 
-* Python 3.5+
+* Python 3.6+
   * This program was rewritten as an excercise in type annotations
+    * Passes `pylint`, `flake8` and `mypy`
 
 ## License
 
