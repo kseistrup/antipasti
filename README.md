@@ -5,19 +5,25 @@ The antipode of paste(1), after an idea by Henrik Christian Grove.
 ## Usage
 
 ```
-Usage: antipasti [OPTIONS] [FILES] ...
-  Options are:
-    -a, --append ........ open file(s) for appending (default 'w')
-    -h, --help .......... this brief help text
-    -v, --version ....... print version information
-    -c, --copyright ..... show copying policy
+Usage: antipasti [OPTIONS] FILE [FILE …]
 
-Antipasti reads from stdin and writes to file1, file2, ..., fileN
-such that lines 1, N+1, 2*N+1, ... are written to file1,
-          lines 2, N+2, 2*N+2, ... are written to file2,
+positional arguments:
+  FILE             filename
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -v, --version    show version information and exit
+  -c, --copyright  show copying policy and exit
+or:
+  -a, --append     append to the given FILEs, do not overwrite
+
+This program reads from standard input and writes to file1..fileN
+such that lines 1, N+1, 2N+1, … are written to file1,
+          lines 2, N+2, 2N+2, … are written to file2,
           et cetera.
 
-Antipasti recognizes '-' and '+' as aliases for stdout resp. stderr.
+Minus (‘-’) and plus (‘+’) are recognized as aliases for standard
+input and standard error, respectively.
 ```
 
 ## Requirements
