@@ -1,0 +1,324 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8 -*-
+"""
+Usage: antipasti [OPTIONS] FILE [FILE …]
+
+positional arguments:
+  FILE             filename
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -v, --version    show version information and exit
+  -c, --copyright  show copying policy and exit
+or:
+  -a, --append     append to the given FILEs, do not overwrite
+
+This program reads from standard input and writes to file1..fileN
+such that lines 1, N+1, 2N+1, … are written to file1,
+          lines 2, N+2, 2N+2, … are written to file2,
+          et cetera.
+
+Minus (‘-’) and plus (‘+’) are recognized as aliases for standard
+input and standard error, respectively.
+"""
+##############################################################################
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the GNU General Public License as published by the Free #
+# Software Foundation; either version 3 of the License, or (at your option)  #
+# any later version.                                                         #
+#                                                                            #
+# This program is distributed in the hope that it will be useful, but with-  #
+# out any warranty; without even the implied warranty of merchantability or  #
+# fitness for a particular purpose. See the GNU General Public License for   #
+# more details.  <http://gplv3.fsf.org/>                                     #
+##############################################################################
+
+import sys
+import os
+import pathlib
+import argparse
+import locale
+
+from collections import deque
+from pprint import pprint
+
+try:
+    from typing import Any, Deque, Dict, IO, List, Union
+except ImportError as imperr:
+    print(str(imperr), file=sys.stderr)
+    sys.exit(1)
+
+if sys.version_info < (3, 5):
+    print('Python 3.5+ required', file=sys.stderr)
+    sys.exit(1)
+
+_ = locale.setlocale(locale.LC_ALL, '')
+
+__author__ = 'Klaus Alexander Seistrup <klaus@seistrup.dk>'
+__whoami__ = 'antipasti'
+__revision__ = 1
+__version__ = '2018.09.02 (rev{})'.format(__revision__)
+__copyright__ = """\
+antipasti {}
+Copyright © 1995-2018 Klaus Alexander Seistrup <klaus@seistrup.dk>
+
+This is free software; see the source for copying conditions. There is no
+warranty; not even for merchantability or fitness for a particular purpose.\
+""".format(__version__)
+
+EPILOG = """\
+This program reads from standard input and writes to file1..fileN
+such that lines 1, N+1, 2N+1, … are written to file1,
+          lines 2, N+2, 2N+2, … are written to file2,
+          et cetera.
+
+Minus (‘-’) and plus (‘+’) are recognized as aliases for standard
+input and standard error, respectively.\
+"""
+
+DEBUG = os.environ.get('DEBUG', 'False')[0].upper() in '1JTY'  # 1/Ja/True/Yes
+(STDIN, STDOUT, STDERR) = (sys.stdin, sys.stdout, sys.stderr)
+
+Error = Union[Exception, str]
+
+
+def debug(head: str, data: Any) -> None:
+    """Possibly pretty print an object to stderr
+
+    Args:
+        head::str
+            A label to associate with data
+        data::Any
+            Optional data to be shown
+
+    Returns:
+        nothing::None
+    """
+    if DEBUG:
+        pprint(head if data is None else {head: data}, stream=STDERR)
+
+
+def deuglify(error: Error) -> Error:
+    """Deuglify the EnvironmentError class of errors
+
+    Args:
+        error::Error
+            A string or an exception to be deuglified
+
+    Returns:
+        error::Error
+            The deuglified string or exception
+    """
+    debug('ugly', error)
+
+    if not isinstance(error, Exception):
+        return error
+
+    nargs = len(error.args)
+
+    if nargs == 1:
+        return str(error)
+
+    strerr = getattr(error, 'strerror', None)
+
+    if nargs == 2 and strerr is not None:
+        fname1 = getattr(error, 'filename', None)
+        fname2 = getattr(error, 'filename2', None)
+
+        if fname1 and fname2:
+            return '{}: {} → {}'.format(strerr, fname1, fname2)
+        if fname1 or fname2:
+            return '{}: {}'.format(strerr, fname1 or fname2)
+
+        return strerr
+
+    # Let's not pretend that we know the nature of the exception
+    return error
+
+
+def die(error: Error = None) -> None:
+    """Exit gracefully
+
+    Args:
+        error::Error
+            An optional string or exception.
+
+    Returns:
+        This method does not return, but exits with
+            0 if no error is given
+            1 if an error is given
+    """
+    debug('exit', error)
+
+    if error:
+        print(deuglify(error), file=STDERR)
+
+    sys.exit(1 if error else 0)
+
+
+def resolve_name(fname: str) -> str:
+    """Resolve the ‘canonical’ name of a file
+
+    Args:
+        fname::str
+            The name of the file. The names ‘-’ and ‘+’ are
+            shorthands for stdout resp. stderr.
+
+    Returns:
+        rname::str
+            The canonical filename.
+    """
+    shorthands = {
+        '-': '<stdout>',
+        '+': '<stderr>',
+        '<stdout>': '<stdout>',
+        '<stderr>': '<stderr>',
+    }
+
+    if fname in shorthands:
+        rname = shorthands[fname]
+    else:
+        fpath = pathlib.Path(fname)
+        rpath = fpath.resolve()
+        rname = rpath.as_posix()
+
+    return rname
+
+
+def open_file(fname: str, append: bool) -> IO:
+    """Open a file for appending or writing
+
+    Args:
+        fname::str
+            The name of the file to open. If the file is stdout
+            or stderr, just duplicate the file descriptor.
+        append::bool
+            If true, open for writing, appending to the end of
+            the file if it exists. Default is overwriting. The
+            mode is ignored for standard IO.
+
+    Returns:
+        fptr::IO
+            An open file pointer to the named file.
+    """
+    stdio = {
+        '<stdout>': STDOUT,
+        '<stderr>': STDERR,
+    }
+
+    if fname in stdio:
+        orig = stdio[fname]
+        fptr = open(os.dup(orig.fileno()), mode=orig.mode)
+    else:
+        fpath = pathlib.Path(fname)
+        fptr = fpath.open('a' if append else 'w')
+
+    return fptr
+
+
+def open_streams(fnames: List[str], append: bool = False) -> Deque[IO]:
+    """Open files for writing or appending
+
+    Args:
+        fnames::List[str]
+            A list of files to open. The names ‘-’ and ‘+’ are
+            shorthands for stdout resp. stderr.
+        append::bool
+            If true, open for writing, appending to the end of
+            the file if it exists. Default is overwriting.
+
+    Returns:
+        streams::Deque[IO]
+            A deque of open file pointers. Files are deduplicated
+            and may appear more than once in the list.
+    """
+    streams: Deque[IO] = deque()
+    cache: Dict[str, IO] = dict()
+
+    for fname in fnames:
+        rname = resolve_name(fname)
+
+        if rname not in cache:
+            cache[rname] = open_file(rname, append)
+
+        streams.appendleft(cache[rname])
+
+    return streams
+
+
+def close_streams(streams: Deque[IO]) -> None:
+    """Close a deque of open filepointers
+
+    Args:
+        streams::Deque[IO]
+            A deque of open file pointers.
+    """
+    for fptr in streams:
+        fptr.close()
+
+
+def antipasti(fptr: IO, streams: Deque[IO]) -> None:
+    """Read from FPTR and write to open files in turn
+
+    Args:
+        fptr::IO
+            A file pointer open for reading.
+        streams::Deque([IO])
+            A deque of open file pointers.
+    """
+    for line in fptr:
+        streams.rotate(1)
+        streams[0].write(line)
+
+
+def main(progname: str = __whoami__) -> int:
+    """Main entry point
+
+    Args:
+        progname::str
+            An optional name for the program
+    Returns:
+        exitcode::int
+    """
+    debug('argv', sys.argv)
+
+    parser = argparse.ArgumentParser(
+        prog=progname,
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=EPILOG
+    )
+    # Generic arguments
+    parser.add_argument('-v', '--version', action='version',
+                        version='%(prog)s/{}'.format(__version__),
+                        help='show version information and exit')
+    parser.add_argument('-c', '--copyright', action='version',
+                        version=__copyright__,
+                        help='show copying policy and exit')
+    # Specific arguments
+    parser.add_argument('-a', '--append', action='store_true',
+                        help='append to the given FILEs, do not overwrite')
+    parser.add_argument('FILE', nargs='+', help='filename')
+
+    args = parser.parse_args()
+    debug('args', args)
+
+    try:
+        streams = open_streams(args.FILE or ['-'], args.append)
+        antipasti(STDIN, streams)
+        close_streams(streams)
+    except (KeyboardInterrupt, BrokenPipeError):
+        die()
+    except (FileNotFoundError, PermissionError) as error:
+        die(error)
+    except IsADirectoryError as error:
+        die(error)
+    except (IOError, OSError, MemoryError) as error:
+        die(error)
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(pathlib.Path(sys.argv[0]).name))
+
+# eof
