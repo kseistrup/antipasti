@@ -56,7 +56,7 @@ _ = locale.setlocale(locale.LC_ALL, '')
 
 __author__ = 'Klaus Alexander Seistrup <klaus@seistrup.dk>'
 __whoami__ = 'antipasti'
-__revision__ = 1
+__revision__ = 2
 __version__ = '2018.09.02 (rev{})'.format(__revision__)
 __copyright__ = """\
 antipasti {}
@@ -252,6 +252,9 @@ def close_streams(streams: Deque[IO]) -> None:
     Args:
         streams::Deque[IO]
             A deque of open file pointers.
+
+    Returns:
+        nothing::None
     """
     for fptr in streams:
         fptr.close()
@@ -265,6 +268,9 @@ def antipasti(fptr: IO, streams: Deque[IO]) -> None:
             A file pointer open for reading.
         streams::Deque([IO])
             A deque of open file pointers.
+
+    Returns:
+        nothing::None
     """
     for line in fptr:
         streams.rotate(1)
@@ -277,6 +283,7 @@ def main(progname: str = __whoami__) -> int:
     Args:
         progname::str
             An optional name for the program
+
     Returns:
         exitcode::int
     """
