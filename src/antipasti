@@ -1,37 +1,11 @@
 #!/usr/bin/env python3
-# -*- mode: python; coding: utf-8 -*-
 """
-Usage: antipasti [OPTIONS] FILE [FILE …]
-
-positional arguments:
-  FILE             filename
-
-optional arguments:
-  -h, --help       show this help message and exit
-  -v, --version    show version information and exit
-  -c, --copyright  show copying policy and exit
-or:
-  -a, --append     append to the given FILEs, do not overwrite
-
-This program reads from standard input and writes to file1..fileN
-such that lines 1, N+1, 2N+1, … are written to file1,
-          lines 2, N+2, 2N+2, … are written to file2,
-          et cetera.
-
-Minus (‘-’) and plus (‘+’) are recognized as aliases for standard
-input and standard error, respectively.
+Usage: antipasti [--append] FILE [FILE …]
 """
-##############################################################################
-# This program is free software; you can redistribute it and/or modify it    #
-# under the terms of the GNU General Public License as published by the Free #
-# Software Foundation; either version 3 of the License, or (at your option)  #
-# any later version.                                                         #
-#                                                                            #
-# This program is distributed in the hope that it will be useful, but with-  #
-# out any warranty; without even the implied warranty of merchantability or  #
-# fitness for a particular purpose. See the GNU General Public License for   #
-# more details.  <http://gplv3.fsf.org/>                                     #
-##############################################################################
+#  Author: Klaus Alexander Seistrup <klaus@seistrup.dk>
+# License: GNU General Public License v3+ ⌘ http://gplv3.fsf.org/
+#
+# [Metadata just above main() method]
 
 import sys
 import os
@@ -44,40 +18,19 @@ from pprint import pprint
 
 try:
     from typing import Any, Deque, Dict, IO, List, Union
-except (ImportError, ModuleNotFoundError) as imperr:
-    print(str(imperr), file=sys.stderr)
-    sys.exit(1)
-
-if sys.version_info < (3, 6):
-    print('Python 3.6+ required', file=sys.stderr)
+    assert sys.version_info >= (3, 6), 'Python 3.6+ required'
+except (AssertionError, ImportError, ModuleNotFoundError) as oops:
+    print(str(oops), file=sys.stderr)
     sys.exit(1)
 
 _ = locale.setlocale(locale.LC_ALL, '')
 
-__author__ = 'Klaus Alexander Seistrup <klaus@seistrup.dk>'
-__whoami__ = 'antipasti'
-__revision__ = 2
-__version__ = '2018.09.02 (rev{})'.format(__revision__)
-__copyright__ = """\
-antipasti {}
-Copyright © 2005-2018 Klaus Alexander Seistrup <klaus@seistrup.dk>
-
-This is free software; see the source for copying conditions. There is no
-warranty; not even for merchantability or fitness for a particular purpose.\
-""".format(__version__)
-
-EPILOG = """\
-This program reads from standard input and writes to file1..fileN
-such that lines 1, N+1, 2N+1, … are written to file1,
-          lines 2, N+2, 2N+2, … are written to file2,
-          et cetera.
-
-Minus (‘-’) and plus (‘+’) are recognized as aliases for standard
-input and standard error, respectively.\
-"""
-
-DEBUG = os.environ.get('DEBUG', 'False')[0].upper() in '1JTY'  # 1/Ja/True/Yes
+# Standard IO
 (STDIN, STDOUT, STDERR) = (sys.stdin, sys.stdout, sys.stderr)
+# Environment variables
+ENV = os.environ
+# Should we print debug statements?
+DEBUG = ENV.get('DEBUG', 'False')[0].upper() in '1JTY'  # 1/Ja/True/Yes
 
 Error = Union[Exception, str]
 
@@ -98,62 +51,24 @@ def debug(head: str, data: Any) -> None:
         pprint(head if data is None else {head: data}, stream=STDERR)
 
 
-def deuglify(error: Error) -> Error:
-    """Deuglify the EnvironmentError class of errors
-
-    Args:
-        error::Error
-            A string or an exception to be deuglified
-
-    Returns:
-        error::Error
-            The deuglified string or exception
-    """
-    debug('ugly', error)
-
-    if not isinstance(error, Exception):
-        return error
-
-    nargs = len(error.args)
-
-    if nargs == 1:
-        return str(error)
-
-    strerr = getattr(error, 'strerror', None)
-
-    if nargs == 2 and strerr is not None:
-        fname1 = getattr(error, 'filename', None)
-        fname2 = getattr(error, 'filename2', None)
-
-        if fname1 and fname2:
-            return '{}: {} → {}'.format(strerr, fname1, fname2)
-        if fname1 or fname2:
-            return '{}: {}'.format(strerr, fname1 or fname2)
-
-        return strerr
-
-    # Let's not pretend that we know the nature of the exception
-    return error
-
-
-def die(error: Error = None) -> None:
+def die(reason: Error = None) -> None:
     """Exit gracefully
 
     Args:
-        error::Error
+        reason::Error
             An optional string or exception.
 
     Returns:
         This method does not return, but exits with
-            0 if no error is given
-            1 if an error is given
+            0 if no reason is given
+            1 if an reason is given
     """
-    debug('exit', error)
+    debug('exit', reason)
 
-    if error:
-        print(deuglify(error), file=STDERR)
+    if reason:
+        print(reason, file=STDERR)
 
-    sys.exit(1 if error else 0)
+    sys.exit(1 if reason else 0)
 
 
 def resolve_name(fname: str) -> str:
@@ -277,6 +192,31 @@ def antipasti(fptr: IO, streams: Deque[IO]) -> None:
         streams[0].write(line)
 
 
+############
+# Metadata
+__whoami__ = 'antipasti'
+__revision__ = 1
+__version__ = '2018.09.05-{}'.format(__revision__)
+__author__ = 'Klaus Alexander Seistrup <klaus@seistrup.dk>'
+__copyright__ = """\
+antipasti {version}
+Copyright © 2005-2018 {author}
+
+This is free software; see the source for copying conditions. There is no
+warranty; not even for merchantability or fitness for a particular purpose.\
+""".format(version=__version__, author=__author__)
+__epilog__ = """\
+This program reads from standard input and writes to file1..fileN
+such that lines 1, N+1, 2N+1, … are written to file1,
+          lines 2, N+2, 2N+2, … are written to file2,
+          et cetera.
+
+Minus (‘-’) and plus (‘+’) are recognized as aliases for standard
+input and standard error, respectively.\
+"""
+############
+
+
 def main(progname: str = __whoami__) -> int:
     """Main entry point
 
@@ -292,7 +232,7 @@ def main(progname: str = __whoami__) -> int:
     parser = argparse.ArgumentParser(
         prog=progname,
         formatter_class=argparse.RawTextHelpFormatter,
-        epilog=EPILOG
+        epilog=__epilog__
     )
     # Generic arguments
     parser.add_argument('-v', '--version', action='version',
