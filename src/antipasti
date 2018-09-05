@@ -195,8 +195,8 @@ def antipasti(fptr: IO, streams: Deque[IO]) -> None:
 ############
 # Metadata
 __whoami__ = 'antipasti'
-__revision__ = 1
-__version__ = '2018.09.05-{}'.format(__revision__)
+__revision__ = 2
+__version__ = '2018.09.05-{revision}'.format(revision=__revision__)
 __author__ = 'Klaus Alexander Seistrup <klaus@seistrup.dk>'
 __copyright__ = """\
 antipasti {version}
